@@ -75,12 +75,12 @@ fi
 if [ -z "$scriptRepo" ]
 then
   echo "system git script repo:"
-  read binRepo
+  read scriptRepo
 fi
 if [ -z "$configRepo" ]
 then
   echo "system git config repo:"
-  read libRepo
+  read configRepo
 fi
 if [ -z "$repoURL" ]
 then
@@ -93,8 +93,8 @@ then
   read repoEXT
 fi
 #default repo
-[ -z "$scriptRepo" ] && binRepo="$user/systemScript"
-[ -z "$configRepo" ] && libRepo="$user/systemConfig"
+[ -z "$scriptRepo" ] && scriptRepo="$user/systemScript"
+[ -z "$configRepo" ] && configRepo="$user/systemConfig"
 
 [ -z "$repoURL" ] && repoURL="https://github.com"
 [ -z "$repoEXT" ] && repoEXT="git"
@@ -127,13 +127,13 @@ sudo chown -R "$USER:$USER" {.,}*
 
 #clone git repositries
 {
-	git clone "${repoURL}/${binRepo}" "./bin" &&
+	git clone "${repoURL}/${scriptRepo}" "./script" &&
 	echo "scriptRepo git clone success"
 } || {
 	echo "scriptRepo git clone fail"
 }
 {
-	git clone "${repoURL}/${libRepo}" "./lib" &&
+	git clone "${repoURL}/${configRepo}" "./config" &&
 	echo "configRepo git clone success"
 } || {
 	echo "configRepo git clone fail"
