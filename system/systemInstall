@@ -45,8 +45,8 @@ scriptName="$(basename "$0")"
 user=AaronDavisG
 email=aaron.davis.g@gmail.com
 
-scriptRepo=AaronDavisG/systemBin
-configRepo=AaronDavisG/systemLib
+scriptRepo=AaronDavisG/systemScript
+configRepo=AaronDavisG/systemConfig
 
 repoURL=https://github.com
 repoEXT=git
