@@ -42,11 +42,11 @@ base="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 scriptName="$(basename "$0")"
 
 #hard code option
-user=AaronDavisG
-email=aaron.davis.g@gmail.com
+user=
+email=
 
-scriptRepo=AaronDavisG/systemScript
-configRepo=AaronDavisG/systemConfig
+scriptRepo=
+configRepo=
 
 repoURL=https://github.com
 repoEXT=git
