@@ -33,7 +33,7 @@ user="$("$getValue" "$gitVar" "user=")"
 email="$("$getValue" "$gitVar" "email=")"
 
 scriptRepo="$("$getValue" "$gitVar" "scriptRepo=")"
-configRepo="$("$getValue" "$gitVar" "libRepo=")"
+configRepo="$("$getValue" "$gitVar" "configRepo=")"
 
 repoURL="$("$getValue" "$gitVar" "repoURL=")"
 repoEXT="$("$getValue" "$gitVar" "repoEXT=")"
