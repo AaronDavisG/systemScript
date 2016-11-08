@@ -58,8 +58,8 @@ repoEXT=git
 [ "$#" -ge "3" ] && [ "$3" -n ] && scriptRepo="$3"
 [ "$#" -ge "4" ] && [ "$4" -n ] && configRepo="$4"
 
-[ "$#" -ge "5" ] && [ "$5" -n ] && scriptRepo="$5"
-[ "$#" -ge "6" ] && [ "$6" -n ] && configRepo="$6"
+[ "$#" -ge "5" ] && [ "$5" -n ] && repoURL="$5"
+[ "$#" -ge "6" ] && [ "$6" -n ] && repoEXT="$6"
 
 #read option
 if [ -z "$user" ]
@@ -87,7 +87,7 @@ then
   echo "system repo url:"
   read repoURL
 fi
-if [ -z "$configRepo" ]
+if [ -z "$repoEXT" ]
 then
   echo "system repo ext:"
   read repoEXT
