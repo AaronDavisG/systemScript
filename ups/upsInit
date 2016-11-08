@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+
+#ups init
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+setValue="$root/script/system/setValue"
+
+upsVar="$root/config/ups/var"
+
+nutUserName="$("$getValue" "$upsVar" "nutUserName=" "nutmon")"
+
+name="$("$getValue" "$upsVar" "name=" "UPS")"
+driver="$("$getValue" "$upsVar" "driver=" "usbhid-ups")"
+devicePort="$("$getValue" "$upsVar" "devicePort=" "auto")"
+type="$("$getValue" "$upsVar" "type=")"
+description="$("$getValue" "$upsVar" "description=")"
+mode="$("$getValue" "$upsVar" "mode=" "standalone")"
+listenPort="$("$getValue" "$upsVar" "listenPort=" "3493")"
+user="$("$getValue" "$upsVar" "user=" "UPSUSER")"
+password="$("$getValue" "$upsVar" "password=" "" "EXTEND")"
+upsmonStatus="$("$getValue" "$upsVar" "upsmonStatus=" "master")"
+event="$("$getValue" "$upsVar" "event=" "event")"
+
+nutDir=/etc/nut
+
+file="$nutDir/ups.conf"
+
+if [ -n "$name" ]
+then
+	"$setValue" "$file" "[$name]" ""
+
+	[ -n "$driver" ] && "$setValue" "$file" "driver = " "$driver"
+	[ -n "$devicePort" ] && "$setValue" "$file" "port = " "$devicePort"
+	[ -n "$type" ] && "$setValue" "$file" "type = " "$type"
+	[ -n "$description" ] && "$setValue" "$file" "desc = " "$description"
+fi
+file="$nutDir/nut.conf"
+
+[ -n "$mode" ] && "$setValue" "$file" "MODE=" "$mode"
+
+file="$nutDir/upsd.conf"
+
+if [ -n "$listenPort" ]
+then
+	"$setValue" "$file" "LISTEN 127.0.0.1 " "$listenPort"
+	"$setValue" "$file" "LISTEN ::1 " "$listenPort"
+fi
+file="$nutDir/upsd.users"
+
+if [ -n "$user" ]
+then
+	"$setValue" "$file" "[$user]" ""
+
+	[ -n "$password" ] && "$setValue" "$file" "password = " "$password"
+	[ -n "$upsmonStatus" ] && "$setValue" "$file" "upsmon " "$upsmonStatus"
+fi
+file="$nutDir/upsmon.conf"
+
+[ -n "$nutUserName" ] && "$setValue" "$file" "RUN_AS_USER " "$nutUserName"
+
+if [ -n "$name" ] && [ -n "$user" ] && [ -n "$password" ] && [ -n "$upsmonStatus" ]
+then
+	"$setValue" "$file" "MONITOR " "$name@localhost 1 $user $password $upsmonStatus"
+fi
+if [ -n "$event" ]
+then
+	"$setValue" "$file" "NOTIFYCMD " "$dir/$event"
+	"$setValue" "$file" "NOTIFYMSG ONLINE " "ONLINE"
+	"$setValue" "$file" "NOTIFYMSG ONBATT " "ONBATT"
+	"$setValue" "$file" "NOTIFYMSG LOWBATT " "LOWBATT"
+	"$setValue" "$file" "NOTIFYFLAG ONLINE " "EXEC"
+	"$setValue" "$file" "NOTIFYFLAG ONBATT " "EXEC"
+	"$setValue" "$file" "NOTIFYFLAG LOWBATT " "EXEC"
+fi
+"$action" "$thisDir" "log" "$scriptName"
+echo "$thisDir $scriptName exit 0"
+exit 0

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+file="$1"
+key=""
+default=""
+extend=""
+
+value=""
+
+[ "$#" -ge "2" ] && key="$2"
+[ "$#" -ge "3" ] && default="$3"
+[ "$#" -ge "4" ] && extend="$4"
+
+if [ -e "$file" ]
+then
+	while IFS= read -r line
+	do
+		if [[ "$line" == "$key"* ]]
+		then
+			size="${#key}"
+
+			value="${line:$size}"
+
+			break
+		fi
+	done < "$file"
+fi
+[ -z "$value" ] && value="$default"
+
+if [ "$extend" = "EXTEND" ]
+then
+	if [[ "$value" == "READ"* ]]
+	then
+		read value
+	elif [[ "$value" == "RANDOM"* ]]
+	then
+	#do something here
+		value="$(date | md5sum)"
+
+	elif [[ "$value" == "EVAL"* ]]
+	then
+	#do something here
+		value="$value"
+	fi
+fi
+echo  "$value"
+exit 0

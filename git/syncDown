@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+#pull and merge changes from github to local clone
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+action="$root/script/system/action"
+
+[ "$#" -ge 1 ] && gitDir="$1"
+
+echo "starting $thisDir $scriptName" "$gitDir"
+
+[ -z "$gitDir" ] && echo "no git dir" && exit 1
+
+[ ! -d "$gitDir" ] && echo "gitDir does not exist" && exit 1 
+
+ cd "$gitDir"
+
+#Change to clone dir 
+#pull from repositry to upstream/master
+#check out master branch
+#merge master and upstream/master
+
+{
+	git pull upstream &&
+	echo "$gitDir git pull upstream success"
+} || {
+	echo "$gitDir git pull upstream fail"
+}
+{
+	git checkout master &&
+	echo "$gitDir git checkout master success"
+} || {
+	echo "$gitDir git checkout master fail"
+}
+{
+	git merge upstream/master &&
+	echo "$gitDir git merge upstream/master success"
+} || {
+	echo "$gitDir git merge upstream/master fail"
+}
+
+"$action" "$thisDir" "log" "$scriptName" " $gitDir"
+echo "$thisDir $scriptName exit 0"
+exit 0

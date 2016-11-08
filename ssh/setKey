@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+#add ssh user with rsa pub key
+#if current user not target user must run as root
+
+#can pass user and key in as args or read in
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+setValue="$root/script/system/setValue"
+
+sshVar="$root/"
+
+if [ "$#" -ge "1" ]
+then
+	user="$1"
+else
+	echo "ssh user:"
+	read user
+fi
+if [ -n "$user" ] && [ -d "/home/$user" ]
+then
+	if [ "$#" -ge "2" ]
+	then
+		key="$2"
+	else
+		echo "$user ssh key:"
+		read key
+	fi
+	if [ -n "$key" ]
+	then
+		#add user to AllowUsers
+		sshd_config="/etc/ssh/sshd_config"
+		sshVar="$root/lib/ssh/var"
+
+		AllowUsers="$("$getValue" "$sshd_config" "AllowUsers ")"
+		
+		addUser="false"
+
+		if [ -n "$AllowUsers" ]
+		then
+			if [[ "$AllowUsers" == *"$user"* ]]
+			then
+				echo "$user is a current ssh user"
+			else
+				addUser="true"
+				AllowUsers="${AllowUsers} $user"
+			fi
+		else
+			addUser="true"
+			AllowUsers="$user"
+		fi
+		if [ "$addUser" = "true" ]
+		then
+			"$setValue" "$sshd_config" "AllowUsers " "$AllowUsers"
+			echo "$user has been added as a ssh user"
+		fi
+		#add key to home/$user/.ssh/authorized_keys
+		newSSH="false"
+
+		if [ ! -d "/home/$user/.ssh" ]
+		then
+			newSSH="true"
+			mkdir "/home/$user/.ssh"
+			chown "$user:$user" "/home/$user/.ssh"
+			chmod 700 "/home/$user/.ssh"
+		fi
+		if [ ! -e "/home/$user/.ssh/authorized_keys" ]
+		then
+			newSSH="true"
+			touch "/home/$user/.ssh/authorized_keys"
+			chown "$user:$user" "/home/$user/.ssh/authorized_keys"
+			chmod 600 "/home/$user/.ssh/authorized_keys"
+		fi
+		targetAddress="$(echo $key | rev | cut -d" " -f1 | rev)"
+		index="0"
+		targetLine=""
+
+		if [ "$newSSH" = "false" ]
+		then
+			newSSH="true"
+			while read -r line
+			do
+				if [[ "$line" == *"$targetAddress" ]]
+				then
+					newSSH="false"
+					targetLine="$index"
+					break
+				else
+					index="$((index=index+1))"
+				fi
+			done < "/home/$user/.ssh/authorized_keys"
+		fi
+		if [ "$newSSH" = "true" ]
+		then
+			echo "$key" >> "/home/$user/.ssh/authorized_keys"
+			echo "$user ssh key has been added"
+		else
+			index="0"
+			
+			while read -r line
+			do
+				if [ "$index" = "$targetLine" ]
+				then
+					echo "$key" >> "/home/$user/.ssh/authorized_keysTEMP"
+				else
+					echo "$line" >> "/home/$user/.ssh/authorized_keysTEMP"
+				fi
+				index="$((index=index+1))"
+			done < "/home/$user/.ssh/authorized_keys"
+
+			chown --reference="/home/$user/.ssh/authorized_keys" "/home/$user/.ssh/authorized_keysTEMP"
+			chmod --reference="/home/$user/.ssh/authorized_keys" "/home/$user/.ssh/authorized_keysTEMP"
+
+			mv "/home/$user/.ssh/authorized_keysTEMP" "/home/$user/.ssh/authorized_keys"
+
+			echo "$user ssh key has been updated"
+		fi
+	else
+		echo "key not provided"
+		exit 0
+	fi
+else
+	echo "user not found"
+	exit 0
+fi
+"$action" "$thisDir" "log" "$scriptName"
+echo "$thisDir $scriptName exit 0"
+exit 0

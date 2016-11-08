@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+#stop ups
+
+#run as root
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+
+upsVar="$root/config/ups/var"
+
+driver="$("$getValue" "$upsVar" "driver=")"
+
+if [ "$(ps -ef | grep "$driver" | grep -v "grep" | wc -l)" -gt "0" ]
+then
+	{
+		upsdrvctl stop &&
+		echo "ups driver: stop success"
+	} || {
+		echo "ups driver: stop fail"
+	}
+else
+	echo "ups driver is allready stoped"
+fi
+if [ "$(ps -ef | grep upsd | grep -v "grep" | wc -l)" -gt "0" ]
+then
+	{
+		upsd -c stop &&
+		echo "upsd: stop success"
+	} || {
+		echo "upsd: stop fail"
+	}
+else
+	echo "upsd is allready stoped"
+fi
+if [ "$(ps -ef | grep upsmon | grep -v "grep" | wc -l)" -gt "0" ]
+then
+	{
+		upsmon -c stop &&
+		echo "upsmon: stop success"
+	} || {
+		echo "upsmon: stop fail"
+	}
+else
+	echo "upsmon is allready stoped"
+fi
+
+"$action" "$thisDir" "log" "$scriptName"
+echo "$thisDir $scriptName exit 0"
+exit 0

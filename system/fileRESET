@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+
+#file reset default
+
+#pass "INSTALL" as 2nd argument to move reset files
+#from source to reset dir
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+action="$dir/action"
+getValue="$dir/getValue"
+
+name="system"
+install=""
+
+[ "$#" -ge "1" ] && name="$1"
+[ "$#" -ge "2" ] && install="$2"
+
+echo "starting $name fileRESET $install"
+
+sys="$root/config/$name/sys"
+
+setSize="$("$getValue" "$sys" "fileRESETSize=" "0")"
+index="0"
+
+while [ "$index" -lt "$setSize" ]
+do
+	file="$("$getValue" "$sys" "fileRESET$index=")"
+	
+	if [ -n "$file" ]
+	then
+		if [ "$install" = "INSTALL" ]
+		then
+			[ ! -d "$root/reset/$name" ] && mkdir "$root/reset/$name"
+
+			if [ ! -e "$root/reset/$name/fileRESET$index" ]
+			then
+				cp "$file" "$root/reset/$name/fileRESET$index"
+				echo "original $file copied to $root/reset/$name/fileRESET$index"
+			else
+				echo "original $file allready exists at $root/reset/$name/fileRESET$index"
+			fi
+		else
+			cat "$root/reset/$name/fileRESET$index" > "$file"
+			echo "$file is reset to original from $root/reset/$name/fileRESET$index"
+		fi
+	fi
+	index=$((index+1))
+done
+
+[ -n "$install" ] && scriptName="$scriptName $install"
+
+"$action" "$name" "log" "$scriptName"
+echo "$name $scriptName exit 0"
+exit 0

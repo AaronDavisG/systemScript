@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+#system default
+
+#first argument is name of target system
+#second argument is command to be carried out on sub system
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+
+getValue="$dir/getValue"
+action="$dir/action"
+systemName="$1"
+systemCommand="$2"
+
+echo "starting $systemName $systemCommand"
+
+sys="$root/config/$systemName/sys"
+
+setSize="$("$getValue" "$sys" "${systemCommand}Size=" "0")"
+index=0
+
+while [ "$index" -lt "$setSize" ]
+do
+	value="$("$getValue" "$sys" "${systemCommand}$index=")"
+
+	if [ -n "$value" ]
+	then
+		if [ "$systemName" = "system" ]
+		then
+			"$action" $value
+		else
+			"$action" "$systemName" $value
+		fi
+	fi
+	index=$((index+1))
+done
+
+[ -e "$action" ] && "$action" "$systemName" "log" "$systemCommand" " $systemCommand run from systemDEFAULT\n"
+echo "$systemName $systemCommand exit 0"
+exit 0

@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+#remove mongoDB, database and log
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+
+var="$root/config/mongoDB/var"
+
+user="$("$getValue" "$var" "user=" "$USER")"
+group="$("$getValue" "$var" "group=" "$user")"
+dbPath="$("$getValue" "$var" "dbPath=")"
+logPath="$("$getValue" "$var" "logPath=")"
+pidPath="$("$getValue" "$var" "pidPath=")"
+
+if [[ "$dbPath" == *"/" ]]
+then
+	dbPath=${dbPath%"/"}
+fi
+dbName="$(echo "$dbPath" | rev | cut -d"/" -f1 | rev)"
+dbDir="${dbPath%"/$dbName"}"
+
+logName="$(echo "$logPath" | rev | cut -d"/" -f1 | rev)"
+logDir="${logPath%"/$logName"}"
+
+pidName="$(echo "$pidPath" | rev | cut -d"/" -f1 | rev)"
+pidDir="${pidPath%"/$pidName"}"
+
+function removeDir {
+
+	workingDir="$1"
+
+	while true
+	do
+		if [ -n "$workingDir" ] &&
+		[ "$(stat -c "%U:%G" "$workingDir")" = "$user:$group" ] &&
+		[ ! "$(ls -A $workingDir)" ]
+		then
+			rmdir "$workingDir"
+
+			workingName="$(echo "$workingDir" | rev | cut -d"/" -f1 | rev)"
+			workingDir="${workingDir%"/$workingName"}"
+		else
+			break
+		fi
+	done
+}
+if [ -d "$dbPath" ]
+then
+	echo "remove mongoDB database? (type \"yes\")"
+	read removeDatabase
+	if [ "$removeDatabase" = "yes" ]
+	then
+		rm -r "$dbPath"
+		removeDir "$dbDir"
+	fi
+fi
+if [ -e "$logPath" ]
+then
+	echo "remove mongoDB log? (type: \"yes\")"
+	read removeLog
+	if [ "$removeLog" = "yes" ]
+	then
+		rm -r "$logPath"
+		removeDir "$logDir"
+	fi
+fi
+[ -n "$pidPath" ] && [ -e "$pidPath" ] && rm "$pidPath"
+[ -n "$pidDir" ] && [ -d "$pidDir" ] && removeDir "$pidDir"
+{
+	userdel "$user" &&
+	echo "user $user removed"
+} || {
+	echo "can not remove user $user"
+}
+{
+	groupdel "$group" &&
+	echo "group $user removed"
+} || {
+	echo "can not remove group $group"
+}
+"$action" "$thisDir" "log" "$scriptName"
+echo "$thisDir $scriptName exit 0"
+exit 0

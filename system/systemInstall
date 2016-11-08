@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+
+#system install
+
+#this should not be exicuted while in ./system/bin/git
+#call system remove first
+#./system/bin should allready be removed
+#./system/lib should allready be removed
+#this file should be moved to parent dir of system and initialized by system remove
+
+#for new install copy this to disiered base dir
+#if this is a fresh install you can hardcode git setting
+#or pass in as arguments
+#or read in argument
+
+#only run when file is in parent dir of system
+#run as user you want as default owner of all files and folders
+
+#Clean System Start
+
+set -o errexit
+set -o nounset
+set -o pipefail
+shopt -s nullglob
+#set -o xtrace
+
+echo "starting system systemInstall"
+echo "Are you sure you want to do this?"
+echo "Type \"yes\" to continue"
+read systemInstall
+
+[ "$systemInstall" != "yes" ] && exit 0
+
+echo "starting systemInstall"
+
+#optional: good place to upgrade distro
+sudo apt-get -y update
+sudo apt-get -y upgrade
+sudo apt-get -y dist-upgrade
+
+base="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+scriptName="$(basename "$0")"
+
+#hard code option
+user=AaronDavisG
+email=aaron.davis.g@gmail.com
+
+scriptRepo=AaronDavisG/systemBin
+configRepo=AaronDavisG/systemLib
+
+repoURL=https://github.com
+repoEXT=git
+
+#arg option
+[ "$#" -ge "1" ] && [ "$1" -n ] && user="$1"
+[ "$#" -ge "2" ] && [ "$2" -n ] && email="$1"
+
+[ "$#" -ge "3" ] && [ "$3" -n ] && scriptRepo="$3"
+[ "$#" -ge "4" ] && [ "$4" -n ] && configRepo="$4"
+
+[ "$#" -ge "5" ] && [ "$5" -n ] && scriptRepo="$5"
+[ "$#" -ge "6" ] && [ "$6" -n ] && configRepo="$6"
+
+#read option
+if [ -z "$user" ]
+then
+  echo "git user name:"
+  read user
+fi
+if [ -z "$email" ]
+then
+  echo "git user email:"
+  read email
+fi
+if [ -z "$scriptRepo" ]
+then
+  echo "system git script repo:"
+  read binRepo
+fi
+if [ -z "$configRepo" ]
+then
+  echo "system git config repo:"
+  read libRepo
+fi
+if [ -z "$repoURL" ]
+then
+  echo "system repo url:"
+  read repoURL
+fi
+if [ -z "$configRepo" ]
+then
+  echo "system repo ext:"
+  read repoEXT
+fi
+#default repo
+[ -z "$scriptRepo" ] && binRepo="$user/systemScript"
+[ -z "$configRepo" ] && libRepo="$user/systemConfig"
+
+[ -z "$repoURL" ] && repoURL="https://github.com"
+[ -z "$repoEXT" ] && repoEXT="git"
+
+{
+	git config --global user.name "$user" &&
+	echo "git user is $user success"
+} || {
+	echo "git user is $user fail"
+}
+{
+	git config --global user.email "$email" &&
+	echo "git email is $email success"
+} || {
+	echo "git email is $email fail"
+}
+
+#make system directories if clean install
+[ ! -e "$base/system" ] && mkdir "$base/system"
+[ ! -e "$base/system/log" ] && mkdir "$base/system/log"
+[ ! -e "$base/system/reset" ] && mkdir "$base/system/reset"
+
+#make user owner of  directories
+sudo chown "$USER:$USER" "$base/system"
+cd "$base/system"
+sudo chown -R "$USER:$USER" {.,}*
+
+[ -e "$base/system/config" ] && rm -rf "$base/config"
+[ -e "$base/system/script" ] && rm -rf "$base/script"
+
+#clone git repositries
+{
+	git clone "${repoURL}/${binRepo}" "./bin" &&
+	echo "scriptRepo git clone success"
+} || {
+	echo "scriptRepo git clone fail"
+}
+{
+	git clone "${repoURL}/${libRepo}" "./lib" &&
+	echo "configRepo git clone success"
+} || {
+	echo "configRepo git clone fail"
+}
+#add git upstream
+cd "$base/system/script"
+{
+	git remote add upstream "${repoURL}/${scriptRepo}.${repoEXT}" &&
+	echo "scriptRepo git remote add upstream success"
+} || {
+	echo "scriptRepo git remote add upstream fail"
+}
+cd "$base/system/config"
+{
+	git remote add upstream "${repoURL}/${configRepo}.${repoEXT}" &&
+	echo "configRepo git remote add upstream success"
+} || {
+	echo "configRepo git remote add upstream fail"
+}
+
+#system commands
+setValue="$base/system/script/system/setValue"
+action="$base/system/script/system/action"
+
+systemVar="$base/system/config/system/var"
+gitVar="$base/system/config/git/var"
+
+#Set root and user system config
+"$setValue" "$systemVar" "root=" "$base/system"
+"$setValue" "$systemVar" "user=" "$USER"
+
+#Set git user and git email in git config
+"$setValue" "$gitVar" "user=" "$user"
+"$setValue" "$gitVar" "email=" "$email"
+"$setValue" "$gitVar" "scriptRepo=" "$scriptRepo"
+"$setValue" "$gitVar" "configRepo=" "$configRepo"
+
+#log this action
+"$action" "system" "log" "$scriptName" " starting action system install\n"
+
+#start system install as root
+echo "starting system install"
+sudo "$action" "system" "install"
+
+echo "system systemInstall exit 0"
+
+#remove this copy if install is succsesfull
+[ -e "$base/system/script/system/systemInstall" ] && rm -rf "$base/$scriptName"
+exit 0

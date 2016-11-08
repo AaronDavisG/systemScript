@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+#ups shutdown
+
+#must run root
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+action="$root/bin/system/action"
+
+wall "WARNING: SHUTDOWN EVENT!!!!!"
+
+"$action" "$thisDir" "log" "$scriptName"
+#Add shutdown procedures to system
+#"$action" "system" "shutdown"
+#UPS shuts down 90 sec after this is called
+
+#Will not restart if power is restored during this interval---this is a problem
+[ "$(upsdrvctl shutdown)" ] && "$(wall "PSU Shutdown sequence started")"
+exit 0

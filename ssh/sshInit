@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+#init ssh
+#on client computer command line generate rsa keys
+#ssh-keygen -t rsa
+#read in id_rsa.pub key generated in this step
+
+#home dir must have 755 permisions or stricter
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+systemDir="$(echo "$root" | rev | cut -d"/" -f1 | rev)"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+setValue="$root/script/system/setValue"
+
+systemVar="$root/config/system/var"
+sshVar="$root/config/ssh/var"
+
+Port="$("$getValue" "$sshVar" "Port=")"
+X11Forwarding="$("$getValue" "$sshVar" "X11Forwarding=")"
+IgnoreRhosts="$("$getValue" "$sshVar" "IgnoreRhosts=")"
+RSAAuthentication="$("$getValue" "$sshVar" "RSAAuthentication=")"
+PasswordAuthentication="$("$getValue" "$sshVar" "PasswordAuthentication=")"
+HostbasedAuthentication="$("$getValue" "$sshVar" "HostbasedAuthentication=")"
+Protocol="$("$getValue" "$sshVar" "Protocol=")"
+LogLevel="$("$getValue" "$sshVar" "LogLevel=")"
+MaxStartups="$("$getValue" "$sshVar" "MaxStartups=")"
+PermitRootLogin="$("$getValue" "$sshVar" "PermitRootLogin=")"
+AllowUsers="$("$getValue" "$sshVar" "AllowUsers=")"
+DenyUsers="$("$getValue" "$sshVar" "DenyUsers=")"
+PrintLastLog="$("$getValue" "$sshVar" "PrintLastLog=")"
+ListenAddress="$("$getValue" "$sshVar" "ListenAddress=")"
+LoginGraceTime="$("$getValue" "$sshVar" "LoginGraceTime=")"
+PermitEmptyPasswords="$("$getValue" "$sshVar" "PermitEmptyPasswords=")"
+ClientAliveInterval="$("$getValue" "$sshVar" "ClientAliveInterval=")"
+ClientAliveCountMax="$("$getValue" "$sshVar" "ClientAliveCountMax=")"
+StrictModes="$("$getValue" "$sshVar" "StrictModes=")"
+
+sshd_config="/etc/ssh/sshd_config"
+
+[ -n "$Port" ] && "$setValue" "$sshd_config" "Port " "$Port"
+[ -n "$X11Forwarding" ] && "$setValue" "$sshd_config" "X11Forwarding " "$X11Forwarding"
+[ -n "$IgnoreRhosts" ] && "$setValue" "$sshd_config " "IgnoreRhosts " "$IgnoreRhosts"
+[ -n "$RSAAuthentication" ] && "$setValue" "$sshd_config" "RSAAuthentication " "$RSAAuthentication"
+[ -n "$PasswordAuthentication" ] && "$setValue" "$sshd_config" "PasswordAuthentication " "$PasswordAuthentication"
+[ -n "$HostbasedAuthentication" ] && "$setValue" "$sshd_config" "HostbasedAuthentication " "$HostbasedAuthentication"
+[ -n "$Protocol" ] && "$setValue" "$sshd_config" "Protocol " "$Protocol"
+[ -n "$LogLevel" ] && "$setValue" "$sshd_config" "LogLevel " "$LogLevel"
+[ -n "$MaxStartups" ] && "$setValue" "$sshd_config" "MaxStartups " "$MaxStartups"
+[ -n "$PermitRootLogin" ] && "$setValue" "$sshd_config" "PermitRootLogin " "$PermitRootLogin"
+[ -n "$AllowUsers" ] && "$setValue" "$sshd_config" "AllowUsers " "$AllowUsers"
+[ -n "$DenyUsers" ] && "$setValue" "$sshd_config" "DenyUsers " "$DenyUsers"
+[ -n "$PrintLastLog" ] && "$setValue" "$sshd_config" "PrintLastLog " "$PrintLastLog"
+[ -n "$ListenAddress" ] && "$setValue" "$sshd_config" "ListenAddress " "$ListenAddress"
+[ -n "$LoginGraceTime" ] && "$setValue" "$sshd_config" "LoginGraceTime " "$LoginGraceTime"
+[ -n "$PermitEmptyPasswords" ] && "$setValue" "$sshd_config" "PermitEmptyPasswords " "$PermitEmptyPasswords"
+[ -n "$ClientAliveInterval" ] && "$setValue" "$sshd_config" "ClientAliveInterval " "$ClientAliveInterval"
+[ -n "$ClientAliveCountMax" ] && "$setValue" "$sshd_config" "ClientAliveCountMax " "$ClientAliveCountMax"
+[ -n "$StrictModes" ] && "$setValue" "$sshd_config" "StrictModes " "$StrictModes"
+
+user="$("$getValue" "$systemVar" "user=")"
+
+"$action" "ssh" "setKey" "$user"
+
+[ "$(systemctl is-active sshd)" ] && systemctl restart sshd
+
+"$action" "$thisDir" "log" "$scriptName"
+echo "$thisDir $scriptName exit 0"
+exit 0

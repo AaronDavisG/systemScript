@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+#remove ssh file and folder
+
+set -o errexit
+set -o nounset
+set -o pipefail
+shopt -s nullglob
+#set -o xtrace
+
+echo "starting ssh sshRemove"
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+
+for file in /home/*
+do
+	[ -e "$file/.ssh/authorized_keys" ] && rm "$file/.ssh/authorized_keys"
+
+	[ -d "$file/.ssh" ] && rmdir "$file/.ssh"
+done
+
+"$action" "$thisDir" "log" "$scriptName"
+echo "$thisDir $scriptName exit 0"
+exit 0

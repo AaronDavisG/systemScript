@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+#iptables init
+#run as root
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+
+var="$root/config/firewall/var"
+
+setSize="$("$getValue" "$var" "iptablesInitSize=" "0")"
+index="0"
+
+while [ "$index" -lt "$setSize" ]
+do
+	value="$("$getValue" "$var" "iptablesInit$index=")"
+
+	if [ -n "$value" ]
+	then
+		{
+			iptables $value &&
+			echo "iptables $value success"
+		} || {
+			echo "iptables $value fail"
+		}
+	fi
+	index=$((index+1))
+done
+
+echo "saving iptables"
+{
+	iptables-save > /etc/iptables/rules.v4 &&
+	iptables-save > /etc/iptables/rules.v6 &&
+
+	echo "iptables save success"
+} || {
+	echo "iptables save fail"
+}
+"$action" "$thisDir" "log" "$scriptName"
+echo "$thisDir $scriptName exit 0"
+exit 0

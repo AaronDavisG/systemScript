@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+#default cron stop
+#remove command from crontab
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+action="$dir/action"
+getValue="$dir/getValue"
+
+systemVar="$root/config/system/var"
+
+name="system"
+[ "$#" -ge "1" ] && name="$1"
+
+echo "starting $name $scriptName"
+
+cron="$root/config/$name/cron"
+
+systemUser="$("$getValue" "$systemVar" "user=" "$USER")"
+
+cronUser="$("$getValue" "$cron" "user=" "$systemUser")"
+
+min="$("$getValue" "$cron" "min=" "*")"
+hour="$("$getValue" "$cron" "hour=" "*")"
+day="$("$getValue" "$cron" "day=" "*")"
+month="$("$getValue" "$cron" "month=" "*")"
+weekday="$("$getValue" "$cron" "weekday=" "*")"
+
+cronCommand="$("$getValue" "$cron" "command=")"
+
+cronTemp0="$dir/crontabTEMP0"
+cronTemp1="$dir/crontabTEMP1"
+
+if [ -n "$cronCommand" ]
+then
+	isEmpty="false"
+	{
+		crontab -u "$cronUser" -l > "$cronTemp0" &&
+		echo "crontab temp at $cronTemp0"
+	} || {
+		isEmpty="true"
+		echo "crontab is empty"
+	}
+	if [ "$isEmpty" = "false" ]
+	then
+		found=false
+
+		while read -r line
+		do
+			if [[ "$line" == *"$cronCommand" ]]
+			then
+				found=true
+			else
+				echo "$line" >> "$cronTemp1"
+			fi
+		done < "$cronTemp0"
+
+		if [ "$found" = "true" ]
+		then
+			echo "$name removed from crontab"
+		else
+			echo "$name is not in crontab"
+		fi
+		[ -e "$cronTemp1" ] && crontab -u "$cronUser" "$cronTemp1" || crontab -u "$cronUser" -r
+	fi
+else
+	echo  "$name cron command not found"
+	exit 1
+fi
+[ -e "$cronTemp0" ] && rm "$cronTemp0"
+[ -e "$cronTemp1" ] && rm "$cronTemp1"
+
+"$action" "$name" "log" "$scriptName"
+echo "$name $scriptName exit 0"
+exit 0

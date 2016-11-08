@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+echo "warning you are about to reset system and remove bin and lib dirs"
+echo "Are you sure you want to do this?"
+echo "Type \"yes\" to continue"
+read systemRemove
+
+[ "$systemRemove" != "yes" ] && exit 1
+
+exit 0

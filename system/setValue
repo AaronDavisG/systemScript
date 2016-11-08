@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+file="$1"
+key="$2"
+value="$3"
+
+newLine="true"
+index="0"
+
+if [ -e "$file" ]
+then
+	while IFS= read -r line
+	do
+		if [[ "$line" == "$key"* ]]
+		then
+			if [ "$line" = "$key$value" ]
+			then
+				newLine="false"
+			else
+				newLine="$index"
+			fi
+			break
+		fi
+		index=$((index+1))
+	
+	done < "$file"
+fi
+
+if [ "$newLine" = "false" ]
+then
+	echo "$key$value exists in $file"
+
+elif [ "$newLine" = "true" ]
+then
+	#add new line if file doesnt end with one
+	[ ! -z "$(tail -c 1 "$file")" ] && echo "" >> "$file"
+	
+	echo "$key$value" >> "$file"
+	
+	echo "$key$value added to $file"
+else
+	index="0"
+
+	while IFS= read -r line
+	do
+		if [ "$index" = "$newLine" ]
+		then
+			echo "$key$value" >> "${file}TEMP"
+		else
+			echo "$line" >> "${file}TEMP"
+		fi
+		index=$((index+1))
+
+	done < "$file"
+
+	chown --reference="$file" "${file}TEMP"
+	chmod --reference="$file" "${file}TEMP"
+
+	mv "${file}TEMP" "$file"
+
+	echo "$key updated with $value in $file"
+fi
+exit 0

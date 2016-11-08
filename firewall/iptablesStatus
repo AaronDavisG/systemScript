@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+#iptables status
+#run as root
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+
+status="\n"
+{
+	while read -r line
+	do
+	    status="$status $line\n"
+	done  < <(iptables -S) &&
+
+ 	status="$status\n" &&
+
+	while read -r line
+	do
+	    status="$status $line\n"
+	done  < <(iptables -L -v) &&
+
+	echo "iptables status check success"
+} || {
+	echo "iptables status check fail"
+}
+echo -e "$status"
+
+"$action" "$thisDir" "log" "$scriptName" "$status"
+echo "$thisDir $scriptName exit 0"
+exit 0
+
+
+

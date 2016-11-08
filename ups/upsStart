@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+#start ups
+
+#run as root
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+
+upsVar="$root/config/ups/var"
+
+driver="$("$getValue" "$upsVar" "driver=")"
+
+if [ "$(ps -ef | grep "$driver" | grep -v "grep" | wc -l)" -gt "0" ]
+then
+	echo "ups driver is allready active"
+else
+	{
+		upsdrvctl start && 
+		echo "ups driver active"
+	} || {
+		echo "ups driver can not start"
+	}
+fi
+if [ "$(ps -ef | grep upsd | grep -v "grep" | wc -l)" -gt "0" ]
+then
+	echo "upsd is allready active"
+else
+	{
+		upsd && 
+		echo "upsd active"
+	} || {
+		echo "upsd can not start"
+	}
+fi
+if [ "$(ps -ef | grep upsmon | grep -v "grep" | wc -l)" -gt "0" ]
+then
+	echo "upsmon is allready active"
+else
+	{
+		upsmon && 
+		echo "upsmon active"
+	} || {
+		echo "upsmon can not start"
+	}
+fi
+
+"$action" "$thisDir" "log" "$scriptName"
+echo "$thisDir $scriptName exit 0"
+exit 0

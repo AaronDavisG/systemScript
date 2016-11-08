@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+
+# default priv init
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+#if no files in target dir, * returns null not literal string 
+shopt -s nullglob
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+#get subSystem owner and access
+name="system"
+[ "$#" -ge "1" ] && name="$1"
+
+echo "starting $name $scriptName"
+
+getValue="$dir/getValue"
+action="$dir/action"
+
+user="$("$getValue" "$root/config/system/var" "user=")"
+
+#get default owner and access from system lookup
+
+defaultPriv="$root/config/system/privDEFAULT"
+
+dirOwnerDEFAULT="$("$getValue" "$defaultPriv" "dirOwner=" "$user:$user")"
+dirAccessDEFAULT="$("$getValue" "$defaultPriv" "dirAccess=")"
+
+ownerDEFAULT="$("$getValue" "$defaultPriv" "owner=" "$user:$user")"
+accessDEFAULT="$("$getValue" "$defaultPriv" "access=")"
+
+scriptDirOwnerDEFAULT="$("$getValue" "$defaultPriv" "scriptDirOwner=" "$dirOwnerDEFAULT")"
+scriptDirAccessDEFAULT="$("$getValue" "$defaultPriv" "scriptDirAccess=" "$dirAccessDEFAULT")"
+libDirOwnerDEFAULT="$("$getValue" "$defaultPriv" "libDirOwner=" "$dirOwnerDEFAULT")"
+libDirAccessDEFAULT="$("$getValue" "$defaultPriv" "libDirAccess=" "$dirAccessDEFAULT")"
+logDirOwnerDEFAULT="$("$getValue" "$defaultPriv" "logDirOwner=" "$dirOwnerDEFAULT")"
+logDirAccessDEFAULT="$("$getValue" "$defaultPriv" "logDirAccess=" "$dirAccessDEFAULT")"
+resetDirOwnerDEFAULT="$("$getValue" "$defaultPriv" "resetDirOwner=" "$dirOwnerDEFAULT")"
+resetDirAccessDEFAULT="$("$getValue" "$defaultPriv" "resetDirAccess=" "$dirAccessDEFAULT")"
+
+binOwnerDEFAULT="$("$getValue" "$defaultPriv" "bin*Owner=" "$ownerDEFAULT")"
+binAccessDEFAULT="$("$getValue" "$defaultPriv" "bin*Access=" "$accessDEFAULT")"
+libOwnerDEFAULT="$("$getValue" "$defaultPriv" "lib*Owner=" "$ownerDEFAULT")"
+libAccessDEFAULT="$("$getValue" "$defaultPriv" "lib*Access=" "$accessDEFAULT")"
+logOwnerDEFAULT="$("$getValue" "$defaultPriv" "log*Owner=" "$ownerDEFAULT")"
+logAccessDEFAULT="$("$getValue" "$defaultPriv" "log*Access=" "$accessDEFAULT")"
+resetOwnerDEFAULT="$("$getValue" "$defaultPriv" "reset*Owner=" "$ownerDEFAULT")"
+resetAccessDEFAULT="$("$getValue" "$defaultPriv" "reset*Access=" "$accessDEFAULT")"
+
+priv="$root/config/$name/priv"
+
+dirOwner="$("$getValue" "$priv" "dirOwner=")"
+dirAccess="$("$getValue" "$priv" "dirAccess=")"
+
+owner="$("$getValue" "$priv" "owner=")"
+access="$("$getValue" "$priv" "access=")"
+
+function setPriv {
+	
+	file="$1"
+	privName="$2"
+	defaultOwner="$3"
+	defaultAccess="$4"
+	setDirFiles="$5"
+	[ "$setDirFiles" = "true" ] && defaultDirFileOwner="$6"
+	[ "$setDirFiles" = "true" ] && defaultDirFileAccess="$7"
+
+	[ -z "$privName" ] && privName="$(echo "$file" | rev | cut -d"/" -f1 | rev)"
+
+	if [ -d "$file" ]
+	then
+		ownerKey="${privName}DirOwner="
+		accessKey="${privName}DirAccess="
+
+		thisOwner="$dirOwner"
+		thisAccess="$dirAccess"
+	else
+		ownerKey="${privName}Owner="
+		accessKey="${privName}Access="
+
+		thisOwner="$owner"
+		thisAccess="$access"
+	fi
+	targetOwner="$("$getValue" "$priv" "$ownerKey" "$thisOwner")"
+	targetAccess="$("$getValue" "$priv" "$accessKey" "$thisAccess")"
+
+	[ -z "$targetOwner" ] && targetOwner="$("$getValue" "$defaultPriv" "$ownerKey" "$defaultOwner")"
+	[ -z "$targetAccess" ] && targetAccess="$("$getValue" "$defaultPriv" "$accessKey" "$defaultAccess")"
+
+	[ -n "$targetOwner" ] && chown "$targetOwner" "$file"
+	[ -n "$targetAccess" ] && chmod "$targetAccess" "$file"
+
+	echo "chown $targetOwner $file"
+	echo "chmod $targetAccess $file"
+
+	if [ "$setDirFiles" = "true" ]
+	then
+		for f in "$file/"*
+		do
+			setPriv "$f" "" "$defaultDirFileOwner" "$defaultDirFileAccess" "false"
+		done
+	fi
+}
+[ -d "$root/bin/$name" ] && setPriv "$root/bin/$name" "bin" "$scriptDirOwnerDEFAULT" "$scriptDirAccessDEFAULT" "true" "$binOwnerDEFAULT" "$binAccessDEFAULT"
+[ -d "$root/lib/$name" ] && setPriv "$root/lib/$name" "lib" "$libDirOwnerDEFAULT" "$libDirAccessDEFAULT" "true" "$libOwnerDEFAULT" "$libAccessDEFAULT"
+[ -d "$root/log/$name" ] && setPriv "$root/log/$name" "log" "$logDirOwnerDEFAULT" "$logDirAccessDEFAULT" "true" "$logOwnerDEFAULT" "$logAccessDEFAULT"
+[ -d "$root/reset/$name" ] && setPriv "$root/reset/$name" "reset" "$resetDirOwnerDEFAULT" "$resetDirAccessDEFAULT" "true" "$resetOwnerDEFAULT" "$resetAccessDEFAULT"
+
+setSize="$("$getValue" "$priv" "privSize=" "0")"
+index=0
+
+while [ "$index" -lt "$setSize" ]
+do
+	privFile="$("$getValue" "$priv" "privFile$index=")"
+
+	privName="$("$getValue" "$priv" "privName$index=")"
+
+	if [ -e "$privFile" ]
+	then
+		if [ -d "$privFile" ]
+		then
+			setPriv "$privFile" "$privName" "$dirOwnerDEFAULT" "$dirAccessDEFAULT" "false"
+		else
+			setPriv "$privFile" "$privName" "$ownerDEFAULT" "$accessDEFAULT" "false"
+		fi
+	fi
+	index=$((index+1))
+done
+
+"$action" "$name" "log" "$scriptName"
+echo "$name $scriptName exit 0"
+exit 0

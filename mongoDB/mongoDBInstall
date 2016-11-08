@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+#install mongoDB
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+#define packages for installing mongoDB
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+
+var="$root/config/mongoDB/var"
+
+user="$("$getValue" "$var" "user=" "$USER")"
+group="$("$getValue" "$var" "group=" "$user")"
+dbPath="$("$getValue" "$var" "dbPath=")"
+logPath="$("$getValue" "$var" "logPath=")"
+pidPath="$("$getValue" "$var" "pidPath=")"
+
+if [[ "$dbPath" == *"/" ]]
+then
+	dbPath=${dbPath%"/"}
+fi
+logName="$(echo "$logPath" | rev | cut -d"/" -f1 | rev)"
+logDir="${logPath%"/$logName"}"
+
+pidName="$(echo "$pidPath" | rev | cut -d"/" -f1 | rev)"
+pidDir="${pidPath%"/$pidName"}"
+
+function buildDir {
+
+	endDir="$1"
+
+	workingDir=""
+	index="2"
+
+	while [ "$workingDir" != "$endDir" ]
+	do
+		addDir="$(echo "$endDir" | cut -d "/" -f$index)"
+		
+		workingDir="${workingDir}/${addDir}"
+		
+		if [ ! -d "$workingDir" ]
+		then
+			mkdir "$workingDir"
+
+			chown "$user:$group" "$workingDir"
+		fi
+		index=$((index+1))
+	done
+}
+{
+	groupadd "$group" &&
+	echo "group $group added"
+} || {
+	echo "can not add group $group"
+}
+{
+	useradd "$user" -g "$group" &&
+	echo "user $user added"
+} || {
+	echo "can not add user $user"
+}
+buildDir "$dbPath"
+
+buildDir "$logDir"
+
+buildDir "$pidDir"
+
+[ -n "$logPath" ] && [ ! -e "$logPath" ] && sudo -u "$user" -g "$group" touch "$logPath"
+
+#import the public key used by the package management system
+apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
+
+#create a list file for mongoDB
+echo "deb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
+
+#reload local package database
+apt-get update
+
+"$action" "$thisDir" "log" "$scriptName"
+echo "$thisDir $scriptName exit 0"
+exit 0

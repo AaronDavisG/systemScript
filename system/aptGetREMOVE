@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+#aptGet remove
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+action="$dir/action"
+getValue="$dir/getValue"
+
+name="system"
+[ "$#" -ge "1" ] && name="$1"
+
+echo "starting $name $scriptName"
+
+sys="$root/config/$name/sys" 
+
+setSize="$("$getValue" "$sys" "aptGetREMOVESize=" "0")"
+index="0"
+
+while [ "$index" -lt "$setSize" ]
+do
+	value="$("$getValue" "$sys" "aptGetREMOVE$index=")"
+	
+	if [ -n "$value" ]
+	then
+		{
+			apt-get -y remove --auto-remove --allow-change-held-packages $value &&
+			echo "remove $value success"
+		} || {
+			echo "remove $value fail"
+		}
+		{
+			apt-get -y purge --auto-remove $value &&
+			echo "purge $value success"
+		} || {
+			echo "purge $value fail"
+		}
+	fi
+	index=$((index+1))
+done
+
+"$action" "$name" "log" "$scriptName"
+echo "$name $scriptName exit 0"
+exit 0

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+#clearLog
+#run as root
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+echo "starting clearLog"
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$dir/action"
+
+logDir="$root/log/"
+
+for d in "$logDir"*/; do
+	
+	truncate -s 0 "${d}log"
+	echo "cleared ${d}log"
+done
+
+"$action" "$thisDir" "log" "$scriptName" "\n"
+echo "$thisDir $scriptName exit 0"
+exit 0

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+# log default
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+
+name=""
+event=""
+message=""
+
+[ "$#" -ge "1" ] && name="$1"
+[ "$#" -ge "2" ] && event="$2"
+[ "$#" -ge "3" ] && message="$3"
+
+[ ! -d "$root/log/$name" ] && mkdir "$root/log/$name"
+
+echo "$name $event @ $(/bin/date)" >> "$root/log/$name/log"
+
+[ -n "$message" ] && echo -e "$message" >> "$root/log/$name/log"
+
+exit 0

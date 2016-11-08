@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+#ups status
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+
+upsVar="$root/config/ups/var"
+
+name="$("$getValue" "$upsVar" "name=")"
+driver="$("$getValue" "$upsVar" "driver=")"
+
+checkStatus="true"
+
+if [ "$(ps -ef | grep "$driver" | grep -v "grep" | wc -l)" -gt "0" ]
+then
+	echo "ups driver is active"
+else
+	echo "ups driver not active"
+	checkStatus="false"
+fi
+if [ "$(ps -ef | grep upsd | grep -v "grep" | wc -l)" -gt "0" ]
+then
+	echo "upsd is active"
+else
+	echo "upsd not active"
+	checkStatus="false"
+fi
+if [ "$(ps -ef | grep upsmon | grep -v "grep" | wc -l)" -gt "0" ]
+then
+	echo "upsmon is active"
+else
+	echo "upsmon not active"
+	checkStatus="false"
+fi
+if [ "$checkStatus" = "true" ]
+then
+	status="\n"
+	{
+		while read -r line
+		do
+		    status="$status $line\n"
+		done  < <(upsc "$name") &&
+
+		echo "ups status check success"
+	} || {
+		status="ups not active"
+		echo "ups status check fail"
+	}
+else
+	status="ups not active"
+fi
+echo -e "$status"
+
+"$action" "$thisDir" "log" "$scriptName" "$status"
+echo "$thisDir $scriptName exit 0"
+exit 0

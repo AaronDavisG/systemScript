@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+#Push changes on to github
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+systemDir="$(echo "$root" | rev | cut -d"/" -f1 | rev)"
+scriptName="$(basename "$0")"
+
+action="$root/script/system/action"
+
+[ "$#" -ge 1 ] && gitDir="$1"
+
+echo "starting $thisDir $scriptName" "$gitDir"
+
+[ -z "$gitDir" ] && echo "no git dir" && exit 1
+
+[ ! -d "$gitDir" ] && echo "gitDir does not exist" && exit 1 
+
+ cd "$gitDir"
+
+#Change to clone dir 
+#commit changes in all files to master with date message
+#push master to origin
+{
+	git commit -a -m "syncUp@$(/bin/date)" &&
+	echo "$gitDir git commit success"
+} || {
+	echo "$gitDir git commit fail"
+}
+{
+	git push -f origin master &&
+	echo "$gitDir git push success"
+} || {
+	echo "$gitDir git push fail"
+}
+
+"$action" "$thisDir" "log" "$scriptName" " $gitDir"
+echo "$thisDir $scriptName exit 0"
+exit 0

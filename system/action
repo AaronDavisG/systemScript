@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+
+#system action
+
+#first arg is name of target system
+#second arg is command called on target system
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+
+systemName="$1"
+systemCommand=""
+
+auxStart="2"
+
+#check if systemName is a subsystem
+#if not a subsystem then assume it is a 
+#system call and bump args down
+if [ -d "$root/script/$systemName" ]
+then
+	systemCommand="$2"
+else
+	auxStart="1"
+	systemName="system"
+	systemCommand="$1"
+fi
+#loop escape
+if [ "$systemCommand" = "action" ]
+then
+	echo "loop escape: do not call action on action"
+	exit 1;
+fi
+#collect aux args
+auxArgs=""
+index="0"
+
+for arg in "$@"
+do
+ 	[ "$index" -ge "$auxStart" ] && auxArgs="$auxArgs '$arg'"
+	
+	index=$((index+1))
+done
+
+#fist look for command in target bin
+#second look for command in system bin
+#third look for command in system bin with DEFAULT ext
+#finally call systemDEFAULT with target, command and aux args
+if [ -e "$root/script/$systemName/$systemCommand" ]
+then
+	eval exec "$root/script/$systemName/$systemCommand" $auxArgs
+
+elif [ -e "$root/script/system/$systemCommand" ]
+then
+	eval exec "$root/script/system/$systemCommand" "$systemName" $auxArgs
+
+elif [ -e "$root/script/system/${systemCommand}DEFAULT" ]
+then
+	eval exec "$root/script/system/${systemCommand}DEFAULT" "$systemName" $auxArgs
+else
+	eval exec "$root/script/system/systemDEFAULT" "$systemName" "$systemCommand" $auxArgs
+fi
+exit 0

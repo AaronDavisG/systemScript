@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+#ups install
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+
+upsVar="$root/config/ups/var"
+
+nutUserName="$("$getValue" "$upsVar" "nutUserName=")"
+nutGroupName="$("$getValue" "$upsVar" "nutGroupName=")"
+
+[ ! -e "/etc/nut" ] && mkdir -p "/etc/nut"
+{
+	groupadd "$nutGroupName" &&
+	echo "add group $nutGroupName success"
+} || {
+	echo "add group $nutGroupName fail"
+}
+{
+	useradd "$nutUserName" -g "$nutGroupName" -s /sbin/nologin &&
+	echo "add user $nutUserName success"
+} || {
+	echo "add user $nutUserName fail"
+}
+"$action" "$thisDir" "log" "$scriptName"
+echo "$thisDir $scriptName exit 0"
+exit 0

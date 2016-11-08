@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+#init dynIP
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+setValue="$root/script/system/setValue"
+
+var="$root/config/dynIP/var"
+
+[ ! -e "$var" ] && echo -e "address=\ndomain=\nuser=\npassword=" > $var
+
+domain="$("$getValue" "$var" "domain=")"
+user="$("$getValue" "$var" "user=")"
+password="$("$getValue" "$var" "password=")"
+
+if [ -z "$domain" ]
+then
+	if [ "$#" -ge "1" ]
+	then
+		domain="$1"
+	else
+		echo "enter domain to show dynIP:"
+		read domain
+	fi
+	echo "domain: $domain"
+	[ -n "$domain" ] && "$setValue" "$var" "domain=" "$domain"
+fi
+if [ -z "$user" ]
+then
+	if [ "$#" -ge "2" ]
+	then
+		user="$2"
+	else
+		echo "enter user to access domain:"
+		read user
+	fi
+	echo "user: $user"
+	[ -n "$user" ] && "$setValue" "$var" "user=" "$user"
+fi
+if [ -z "$password" ]
+then
+	if [ "$#" -ge "3" ]
+	then
+		password="$3"
+	else
+		echo "enter domain user's password:"
+		read password
+	fi
+	echo "password: $password"
+	[ -n "$password" ] && "$setValue" "$var" "password=" "$password"
+fi
+
+"$action" "$thisDir" "log" "$scriptName"
+echo "$thisDir $scriptName exit 0"
+exit 0
+

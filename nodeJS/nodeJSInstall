@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+#install nodeJS
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+#define packages for installing nodeJS
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+
+curl -sL https://deb.nodesource.com/setup_6.x | bash
+#reload local package database
+apt-get update
+
+"$action" "$thisDir" "log" "$scriptName"
+echo "$thisDir $scriptName exit 0"
+exit 0

@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+#npm install
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+
+echo "starting $thisDir $scriptName"
+
+var="$root/config/nodeJS/var" 
+
+setSize="$("$getValue" "$var" "npmInstallSize=" "0")"
+index="0"
+
+while [ "$index" -lt "$setSize" ]
+do
+	value="$("$getValue" "$var" "npmInstall$index=")"
+
+	if [ -n "$value" ]
+	then
+		{
+			npm install $value &&
+			echo "install $value success"
+		} || {
+			echo "install $value fail"
+		}
+	fi
+	index=$((index+1))
+done
+
+"$action" "$thisDir" "log" "$scriptName"
+echo "$thisDir $scriptName exit 0"
+exit 0

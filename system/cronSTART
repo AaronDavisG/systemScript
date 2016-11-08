@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+#default cron start
+#add command to crontab
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+action="$dir/action"
+getValue="$dir/getValue"
+
+systemVar="$root/config/system/var"
+
+name="system"
+[ "$#" -ge "1" ] && name="$1"
+
+echo "starting $name $scriptName"
+
+cron="$root/config/$name/cron"
+
+systemUser="$("$getValue" "$systemVar" "user=" "$USER")"
+cronUser="$("$getValue" "$cron" "user=" "$systemUser")"
+
+min="$("$getValue" "$cron" "min=" "*")"
+hour="$("$getValue" "$cron" "hour=" "*")"
+day="$("$getValue" "$cron" "day=" "*")"
+month="$("$getValue" "$cron" "month=" "*")"
+weekday="$("$getValue" "$cron" "weekday=" "*")"
+
+cronCommand="$("$getValue" "$cron" "command=")"
+
+cronLine="$min $hour $day $month $weekday $subDir/$name/$cronCommand"
+
+cronTemp0="$dir/crontabTEMP0"
+cronTemp1="$dir/crontabTEMP1"
+
+if [ -n "$cronCommand" ]
+then
+	{
+		crontab -u "$cronUser" -l > "$cronTemp0" &&
+		echo "crontab temp at $cronTemp0"
+	} || {
+		echo "crontab is empty"
+	}
+	write=true
+
+	while read -r line
+	do
+		if [[ "$line" == *"$cronCommand" ]]
+		then
+			write=false
+			
+			echo "$cronLine" >> "$cronTemp1"
+
+			if [ "$line" = "$cronLine" ]
+			then
+				echo "$name exists in crontab"
+			else
+				echo "$name updateted in crontab"
+			fi
+		else
+			echo "$line" >> "$cronTemp1"
+		fi
+	done < "$cronTemp0"
+
+	if [ "$write" = "true" ]
+	then
+		echo "$cronLine" >> "$cronTemp1"
+		echo "$name added to crontab"
+	fi
+	crontab -u "$cronUser" "$cronTemp1"
+else
+	echo  "$name cron command not found"
+	exit 1
+fi
+[ -e "$cronTemp0" ] && rm "$cronTemp0"
+[ -e "$cronTemp1" ] && rm "$cronTemp1"
+
+"$action" "$name" "log" "$scriptName"
+echo "$name $scriptName exit 0"
+exit 0

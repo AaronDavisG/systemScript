@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+
+#system priv
+
+#run as root
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$dir/action"
+getValue="$dir/getValue"
+
+var="$root/config/system/var"
+
+user="$("$getValue" "$var" "user=")"
+
+#get root dirs owner and access
+
+priv="$root/config/system/priv"
+
+dirOwner="$("$getValue" "$priv" "dirOwner=" "$user")"
+dirAccess="$("$getValue" "$priv" "dirAccess=" "755")"
+
+rootDirOwner="$("$getValue" "$priv" "rootDirOwner=" "$dirOwner")"
+rootDirAccess="$("$getValue" "$priv" "rootDirAccess=" "$dirAccess")"
+
+rootBinDirOwner="$("$getValue" "$priv" "rootBinDirOwner=" "$dirOwner")"
+rootBinDirAccess="$("$getValue" "$priv" "rootBinDirAccess=" "$dirAccess")"
+
+rootLibDirOwner="$("$getValue" "$priv" "rootLibDirOwner=" "$dirOwner")"
+rootLibDirAccess="$("$getValue" "$priv" "rootLibDirAccess=" "$dirAccess")"
+
+rootLogDirOwner="$("$getValue" "$priv" "rootLogDirOwner=" "$dirOwner")"
+rootLogDirAccess="$("$getValue" "$priv" "rootLogDirAccess=" "$dirAccess")"
+
+rootResetDirOwner="$("$getValue" "$priv" "rootResetDirOwner=" "$dirOwner")"
+rootResetDirAccess="$("$getValue" "$priv" "rootResetDirAccess=" "$dirAccess")"
+
+#set root dirs owner and access 
+[ -n "$rootDirOwner" ] && chown "$rootDirOwner" "$root"
+[ -n "$rootDirAccess" ] && chmod "$rootDirAccess" "$root"
+
+[ -n "$rootDirOwner" ] && chown "$rootDirOwner" "$root/bin"
+[ -n "$rootDirAccess" ] && chmod "$rootDirAccess" "$root/bin"
+
+[ -n "$rootLibDirOwner" ] && chown "$rootLibDirOwner" "$root/lib"
+[ -n "$rootLibDirAccess" ] && chmod "$rootLibDirAccess" "$root/lib"
+
+[ -n "$rootLogDirOwner" ] && chown "$rootLogDirOwner" "$root/log"
+[ -n "$rootLogDirAccess" ] && chmod "$rootLogDirAccess" "$root/log"
+
+[ -n "$rootResetDirOwner" ] && chown "$rootResetDirOwner" "$root/reset"
+[ -n "$rootResetDirAccess" ] && chmod "$rootResetDirAccess" "$root/reset"
+
+"$action" "$thisDir" "log" "$scriptName"
+echo "$thisDir $scriptName exit 0"
+exit 0

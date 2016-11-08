@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+#default service
+
+#first argument is name of service
+#second argument is service command
+#command options are "start" "stop" "restart "status"
+#"reload" "reload-or-restart" "enable" "disable"
+#"is-active" "is-enabled" "is-failed"
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+
+action="$dir/action"
+getValue="$dir/getValue"
+
+name="$1"
+serviceCommand="$2"
+
+echo "starting $name service $serviceCommand"
+
+sys="$root/config/$name/sys"
+
+setSize="$("$getValue" "$sys" "${serviceCommand}SERVICESize=" "0")"
+index="0"
+
+status=""
+
+while [ "$index" -lt "$setSize" ]
+do
+	value="$("$getValue" "$sys" "${serviceCommand}SERVICE${index}=")"
+
+	 if [ -n "$value" ]
+	 then
+	 	if [ "$serviceCommand" = "status" ] || [[ "$serviceCommand" == "is-"* ]]
+	 	then
+			{
+				status="$(systemctl $serviceCommand $value)" &&
+				echo "systemctl $serviceCommand $value success"
+	 		} || {
+	 			status="null"
+				echo "systemctl $serviceCommand $value fail"
+	 		}
+			echo "$serviceCommand: $status"
+	 	else
+	 		{
+				systemctl $serviceCommand $value &&
+				echo "systemctl $serviceCommand $value success"
+	 		} || {
+				echo "systemctl $serviceCommand $value fail"
+	 		}
+			
+	 	fi
+	 	echo "service $value $serviceCommand"
+	fi
+	index=$((index+1))
+done
+
+"$action" "$name" "log" "service $serviceCommand" " $status"
+echo "$name service $serviceCommand exit 0"
+exit 0

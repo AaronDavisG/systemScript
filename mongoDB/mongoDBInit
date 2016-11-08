@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+#init mongoDB
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+setValue="$root/script/system/setValue"
+
+var="$root/config/mongoDB/var"
+
+user="$("$getValue" "$var" "user=")"
+group="$("$getValue" "$var" "group=")"
+dbPath="$("$getValue" "$var" "dbPath=")"
+logPath="$("$getValue" "$var" "logPath=")"
+pidPath="$("$getValue" "$var" "pidPath=")"
+
+config="/etc/mongod.conf"
+
+[ -n "$dbPath" ] && "$setValue" "$config" "  dbPath: " "$dbPath"
+[ -n "$logPath" ] && "$setValue" "$config" "  path: " "$logPath"
+
+pid="$("$getValue" "$config" "  pidFilePath: ")"
+
+if [ -z "$pid" ]
+then
+echo "processManagement:
+  fork: true
+  pidFilePath: $pidPath" >> "$config"
+
+elif [ "pid" != "$pidPath" ]
+then
+	"$setValue" "$config" "  pidFilePath: " "$pidPath"
+fi
+#pin a specific version of MongoDB
+echo "mongodb-org hold" | dpkg --set-selections
+echo "mongodb-org-server hold" | dpkg --set-selections
+echo "mongodb-org-shell hold" | dpkg --set-selections
+echo "mongodb-org-mongos hold" | dpkg --set-selections
+echo "mongodb-org-tools hold" | dpkg --set-selections
+
+#create systemd service file
+echo "[Unit]
+Description=High-performance, schema-free document-oriented database
+After=network.target
+ 
+[Service]
+Type=forking
+User=$user
+Group=$group
+PIDFile=$pidPath
+ExecStart=/usr/bin/mongod --quiet --config /etc/mongod.conf
+
+[Install]
+WantedBy=multi-user.target" > /lib/systemd/system/mongod.service
+
+systemctl daemon-reload
+
+systemctl enable mongod.service
+
+"$action" "$thisDir" "log" "$scriptName"
+echo "$thisDir $scriptName exit 0"
+exit 0

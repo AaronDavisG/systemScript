@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+
+#system remove
+#remove all of system but log and reset
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+systemDir="$(echo "$root" | rev | cut -d"/" -f1 | rev)"
+baseDir="${root%"/$systemDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+setValue="$root/script/system/setValue"
+
+systemVar="$root/config/system/var"
+
+systemUser="$("$getValue" "$systemVar" "user=")"
+
+gitVar="$root/config/git/var"
+
+user="$("$getValue" "$gitVar" "user=")"
+email="$("$getValue" "$gitVar" "email=")"
+
+scriptRepo="$("$getValue" "$gitVar" "scriptRepo=")"
+configRepo="$("$getValue" "$gitVar" "libRepo=")"
+
+repoURL="$("$getValue" "$gitVar" "repoURL=")"
+repoEXT="$("$getValue" "$gitVar" "repoEXT=")"
+
+originalInstall="$root/script/system/systemInstall"
+newInstall="$baseDir/systemInstall"
+
+cp "$originalInstall" "$newInstall"
+
+chown --reference="$originalInstall" "$newInstall"
+chmod --reference="$originalInstall" "$newInstall"
+
+"$setValue" "$newInstall" "user=" "$user"
+"$setValue" "$newInstall" "email=" "$email"
+
+"$setValue" "$newInstall" "scriptRepo=" "$scriptRepo"
+"$setValue" "$newInstall" "configRepo=" "$configRepo"
+
+"$setValue" "$newInstall" "repoURL=" "$repoURL"
+"$setValue" "$newInstall" "repoEXT=" "$repoEXT"
+
+"$action" "$thisDir" "log" "$scriptName"
+"$action" "system" "log" "remove" "\n"
+
+[ -e "$root/config" ] && rm -rf "$root/config"
+[ -e "$root/script" ] && rm -rf "$root/script"
+
+echo "system systemRemove exit 0"
+exit 0

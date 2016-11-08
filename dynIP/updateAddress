@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+#update an dynamic ip address
+#can pass in address as argument for testing
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+setValue="$root/script/system/setValue"
+
+var="$root/config/$thisDir/var"
+
+newAddress=""
+
+[ "$#" -ge "1" ] && newAddress="$1"
+
+[ -z "$newAddress" ] && newAddress="$(curl -s http://my.ip.fi/)"
+
+echo "new ip address is $newAddress"
+
+oldAddress="$("$getValue" "$var" "address=")"
+
+echo "old ip address is $oldAddress"
+
+if [ "$newAddress" = "$oldAddress" ]
+then
+#optional log: leave uncomented to verify cron is running updateAddress
+	"$action" "$thisDir" "log" "$scriptName" "	ip address is current\n"
+	echo "ip address is current"
+else
+	echo "updating ip address"
+
+	domain="$("$getValue" "$var" "domain=")"
+	user="$("$getValue" "$var" "user=")"
+	password="$("$getValue" "$var" "password=")"
+
+	echo "domain: $domain"
+	echo "user: $user"
+	echo "password: $password"
+
+	if [ -n "$domain" ] && [ -n "$user" ] && [ -n "$password" ]
+	then
+		"$action" "$thisDir" "log" "$scriptName" "	updating ip address to $newAddress\n"
+
+		apiCall="https://$user:$password@domains.google.com/nic/update?hostname=$domain&myip=$newAddress"
+
+		apiRes=$(curl -s "$apiCall")
+
+		if [[ "$apiRes" == "good"* ]] || [[ "$apiRes" == "nochg"* ]]
+		then
+			"$setValue" "$var" "address=" "$newAddress"
+
+			"$action" "$thisDir" "log" "$scriptName" "	ip address update successful\n"
+
+			echo "ip address update successful"
+		else
+			"$action" "$thisDir" "log" "$scriptName" "	ip address update failed\n"
+
+			echo "ip address update failed"
+		fi
+	else
+		echo "can not update ip address"
+	fi
+fi
+echo "$thisDir $scriptName exit 0"
+exit 0
