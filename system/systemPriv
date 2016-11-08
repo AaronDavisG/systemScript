@@ -35,11 +35,11 @@ dirAccess="$("$getValue" "$priv" "dirAccess=" "755")"
 rootDirOwner="$("$getValue" "$priv" "rootDirOwner=" "$dirOwner")"
 rootDirAccess="$("$getValue" "$priv" "rootDirAccess=" "$dirAccess")"
 
-rootBinDirOwner="$("$getValue" "$priv" "rootBinDirOwner=" "$dirOwner")"
-rootBinDirAccess="$("$getValue" "$priv" "rootBinDirAccess=" "$dirAccess")"
+rootScriptDirOwner="$("$getValue" "$priv" "rootScriptDirOwner=" "$dirOwner")"
+rootScriptDirAccess="$("$getValue" "$priv" "rootScriptDirAccess=" "$dirAccess")"
 
-rootLibDirOwner="$("$getValue" "$priv" "rootLibDirOwner=" "$dirOwner")"
-rootLibDirAccess="$("$getValue" "$priv" "rootLibDirAccess=" "$dirAccess")"
+rootConfigDirOwner="$("$getValue" "$priv" "rootConfigDirOwner=" "$dirOwner")"
+rootConfigDirAccess="$("$getValue" "$priv" "rootConfigDirAccess=" "$dirAccess")"
 
 rootLogDirOwner="$("$getValue" "$priv" "rootLogDirOwner=" "$dirOwner")"
 rootLogDirAccess="$("$getValue" "$priv" "rootLogDirAccess=" "$dirAccess")"
@@ -51,11 +51,11 @@ rootResetDirAccess="$("$getValue" "$priv" "rootResetDirAccess=" "$dirAccess")"
 [ -n "$rootDirOwner" ] && chown "$rootDirOwner" "$root"
 [ -n "$rootDirAccess" ] && chmod "$rootDirAccess" "$root"
 
-[ -n "$rootDirOwner" ] && chown "$rootDirOwner" "$root/bin"
-[ -n "$rootDirAccess" ] && chmod "$rootDirAccess" "$root/bin"
+[ -n "$rootScriptDirOwner" ] && chown "$rootScriptDirOwner" "$root/script"
+[ -n "$rootScriptDirAccess" ] && chmod "$rootScriptDirAccess" "$root/script"
 
-[ -n "$rootLibDirOwner" ] && chown "$rootLibDirOwner" "$root/lib"
-[ -n "$rootLibDirAccess" ] && chmod "$rootLibDirAccess" "$root/lib"
+[ -n "$rootConfigDirOwner" ] && chown "$rootConfigDirOwner" "$root/config"
+[ -n "$rootConfigDirAccess" ] && chmod "$rootConfigDirAccess" "$root/config"
 
 [ -n "$rootLogDirOwner" ] && chown "$rootLogDirOwner" "$root/log"
 [ -n "$rootLogDirAccess" ] && chmod "$rootLogDirAccess" "$root/log"
