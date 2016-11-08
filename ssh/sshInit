@@ -5,6 +5,8 @@
 #read in id_rsa.pub key generated in this step
 
 #home dir must have 755 permisions or stricter
+#./.ssh/ dir must have 700 permisions
+#./.ssh/authorized keys dir must have 600 permisions 
 
 set -o errexit
 set -o nounset

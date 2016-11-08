@@ -44,7 +44,7 @@ then
 	then
 		#add user to AllowUsers
 		sshd_config="/etc/ssh/sshd_config"
-		sshVar="$root/lib/ssh/var"
+		sshVar="$root/config/ssh/var"
 
 		AllowUsers="$("$getValue" "$sshd_config" "AllowUsers ")"
 		
