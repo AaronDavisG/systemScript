@@ -1,1 +1,68 @@
-here
+#!/usr/bin/env bash
+
+#create git repo from local dir
+#dir is first arg
+#repoName is second arg
+
+#repo must exist in github allready
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+thisDir="$(echo "$dir" | rev | cut -d"/" -f1 | rev)"
+subDir="${dir%"/$thisDir"}"
+scriptDir="$(echo "$subDir" | rev | cut -d"/" -f1 | rev)"
+root="${subDir%"/$scriptDir"}"
+systemDir="$(echo "$root" | rev | cut -d"/" -f1 | rev)"
+scriptName="$(basename "$0")"
+
+echo "starting $thisDir $scriptName"
+
+action="$root/script/system/action"
+getValue="$root/script/system/getValue"
+
+gitVar="$root/config/git/var"
+
+[ "$#" -ge 1 ] && gitDir="$1" || gitDir=""
+
+[ "$#" -ge 2 ] && gitRepo="$2" || gitRepo=""
+
+[ "$#" -ge 3 ] && repoURL="$3" || repoURL=""
+
+[ "$#" -ge 4 ] && repoEXT="$4" || repoEXT=""
+
+echo "starting $thisDir $scriptName" "$gitDir"
+
+[ -z $"repoURL" ] && repoURL="$("$getValue" "$gitVar" "repoURL=")"
+[ -z $"repoEXT" ] && repoEXT="$("$getValue" "$gitVar" "repoEXT=")"
+
+[ -z "$gitDir" ] && echo "no git dir" && exit 1
+
+[ ! -d "$gitDir" ] && echo "gitDir does not exist" && exit 1 
+
+[ -z "$gitRepo" ] && echo "no git repo" && exit 1
+
+
+#clone git repositries
+{
+	git clone "${repoURL}/${gitRepo}" "$gitDir" &&
+	echo "gitRepo git clone success"
+} || {
+	echo "gitRepo git clone fail"
+}
+
+#add git upstream
+cd "$gitDir"
+{
+	git remote add upstream "${repoURL}/${gitRepo}.${repoEXT}" &&
+	echo "gitRepo git remote add upstream success"
+} || {
+	echo "gitRepo git remote add upstream fail"
+}
+
+"$action" "$thisDir" "log" "$scriptName" "$gitRepo"
+echo "$thisDir $scriptName exit 0"
+exit 0
