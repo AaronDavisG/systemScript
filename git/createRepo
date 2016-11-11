@@ -26,14 +26,18 @@ getValue="$root/script/system/getValue"
 
 gitVar="$root/config/git/var"
 
-repoURL="$("$getValue" "$gitVar" "repoURL=")"
-repoEXT="$("$getValue" "$gitVar" "repoEXT=")"
-
 [ "$#" -ge 1 ] && gitDir="$1" || gitDir=""
 
 [ "$#" -ge 2 ] && gitRepo="$2" || gitRepo=""
 
+[ "$#" -ge 3 ] && repoURL="$3" || repoURL=""
+
+[ "$#" -ge 4 ] && repoEXT="$4" || repoEXT=""
+
 echo "starting $thisDir $scriptName" "$gitDir"
+
+[ -z $"repoURL" ] && repoURL="$("$getValue" "$gitVar" "repoURL=")"
+[ -z $"repoEXT" ] && repoEXT="$("$getValue" "$gitVar" "repoEXT=")"
 
 [ -z "$gitDir" ] && echo "no git dir" && exit 1
 
